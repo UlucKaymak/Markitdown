@@ -7,7 +7,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { 
   Plus, Minus, Bold, Italic, List, Code, Link, Table, 
-  Indent, PenLine, Columns2, Eye, Link2, FileImage
+  Indent, PenLine, Columns2, Eye, Link2, FileImage, Search, X, ChevronUp, ChevronDown
 } from "lucide-react";
 import markdownGuide from "./MarkdownGuide.md?raw";
 import openingMd from "./Opening.md?raw";
@@ -38,9 +38,18 @@ function App() {
   const [isSettingsVisible, setIsSettingsVisible] = useState(false);
   const [isSyncScroll, setIsSyncScroll] = useState(true);
   
+  // Find & Replace State
+  const [isFindVisible, setIsFindVisible] = useState(false);
+  const [findText, setFindText] = useState("");
+  const [replaceText, setReplaceText] = useState("");
+  const [matchCase, setMatchCase] = useState(false);
+  const [findResults, setFindResults] = useState<number[]>([]);
+  const [currentResultIndex, setCurrentResultIndex] = useState(-1);
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const activeSide = useRef<'editor' | 'preview' | null>(null);
+  const findInputRef = useRef<HTMLInputElement>(null);
 
   // Settings State
   const [theme, setTheme] = useState<Theme>('light');
@@ -118,6 +127,90 @@ function App() {
     }, 0);
   };
 
+  // Find & Replace Logic
+  useEffect(() => {
+    if (!findText) {
+      setFindResults([]);
+      setCurrentResultIndex(-1);
+      return;
+    }
+
+    try {
+      const regex = new RegExp(findText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), matchCase ? "g" : "gi");
+      const results: number[] = [];
+      let match;
+      while ((match = regex.exec(markdown)) !== null) {
+        results.push(match.index);
+      }
+      setFindResults(results);
+      if (results.length > 0) {
+        if (currentResultIndex === -1 || currentResultIndex >= results.length) {
+          setCurrentResultIndex(0);
+        }
+      } else {
+        setCurrentResultIndex(-1);
+      }
+    } catch (e) {
+      setFindResults([]);
+      setCurrentResultIndex(-1);
+    }
+  }, [findText, matchCase, markdown]);
+
+  const scrollToMatch = (index: number) => {
+    if (index < 0 || index >= findResults.length) return;
+    
+    if (viewMode !== 'reading' && textareaRef.current) {
+      const pos = findResults[index];
+      const textarea = textareaRef.current;
+      textarea.focus();
+      textarea.setSelectionRange(pos, pos + findText.length);
+      
+      const lineHeight = fontSize * 1.5; 
+      const linesBefore = markdown.substring(0, pos).split('\n').length;
+      textarea.scrollTop = (linesBefore - 5) * lineHeight;
+    } else if (viewMode === 'reading') {
+      // Use browser built-in search for reading mode rendered content
+      (window as any).find(findText, matchCase, false, true, false, true, false);
+    }
+  };
+
+  const handleNextMatch = () => {
+    if (findText && viewMode === 'reading') {
+      (window as any).find(findText, matchCase, false, true, false, true, false);
+      return;
+    }
+    
+    if (findResults.length === 0) return;
+    const nextIndex = (currentResultIndex + 1) % findResults.length;
+    setCurrentResultIndex(nextIndex);
+    scrollToMatch(nextIndex);
+  };
+
+  const handlePrevMatch = () => {
+    if (findText && viewMode === 'reading') {
+      (window as any).find(findText, matchCase, true, true, false, true, false);
+      return;
+    }
+
+    if (findResults.length === 0) return;
+    const prevIndex = (currentResultIndex - 1 + findResults.length) % findResults.length;
+    setCurrentResultIndex(prevIndex);
+    scrollToMatch(prevIndex);
+  };
+
+  const handleReplace = () => {
+    if (currentResultIndex < 0 || !textareaRef.current) return;
+    const pos = findResults[currentResultIndex];
+    const newMarkdown = markdown.substring(0, pos) + replaceText + markdown.substring(pos + findText.length);
+    setMarkdown(newMarkdown);
+  };
+
+  const handleReplaceAll = () => {
+    if (!findText) return;
+    const regex = new RegExp(findText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), matchCase ? "g" : "gi");
+    setMarkdown(markdown.replace(regex, replaceText));
+  };
+
   // Direct Sync Logic
   const handleScroll = (side: 'editor' | 'preview') => (e: React.UIEvent<HTMLElement>) => {
     if (!isSyncScroll || viewMode !== 'split') return;
@@ -161,9 +254,22 @@ function App() {
           setFilePath(null); 
           setViewMode('editing');
           return;
+        } else if (e.key.toLowerCase() === 'f') {
+          e.preventDefault();
+          setIsFindVisible(true);
+          setTimeout(() => findInputRef.current?.focus(), 10);
+          return;
         }
       }
       
+      if (e.key === 'Escape') {
+        if (isFindVisible) {
+          setIsFindVisible(false);
+          e.preventDefault();
+        }
+        return;
+      }
+
       // Editor-only shortcuts
       if (!isEditingRef.current) {
         return;
@@ -216,7 +322,7 @@ function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [isFindVisible]);
 
   const handleEditorChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     setMarkdown(e.target.value);
@@ -275,6 +381,22 @@ function App() {
     return `${baseDir}${separator}${href}`;
   };
 
+  // Helper to highlight text in Reading Mode
+  const HighlightText = ({ children }: { children: string }) => {
+    if (!isFindVisible || !findText) return <>{children}</>;
+    
+    const parts = children.split(new RegExp(`(${findText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, matchCase ? 'g' : 'gi'));
+    return (
+      <>
+        {parts.map((part, i) => 
+          part.toLowerCase() === findText.toLowerCase() 
+            ? <mark key={i} className="search-highlight">{part}</mark> 
+            : part
+        )}
+      </>
+    );
+  };
+
   return (
     <div 
       className={`flex flex-col h-screen w-screen overflow-hidden transition-colors duration-200 ${getThemeClasses()}`}
@@ -312,7 +434,7 @@ function App() {
           <button onClick={() => insertMarkdown("  ")} title="Indent" className="p-2 hover:bg-slate-500/10 rounded text-slate-500">
             <Indent size={18} />
           </button>
-          <div className="w-px h-5 bg-slate-500/10 mx-2"></div>
+          <div className="w-px h-5 bg-slate-500/10 mx-1"></div>
           <div className={`flex p-1 rounded-lg ${theme === 'light' ? 'bg-[#dce0e8]' : 'bg-[#313244]'}`}>
             <button onClick={() => setViewMode('editing')} className={`px-2 py-1 rounded transition-all ${viewMode === 'editing' ? (theme === 'light' ? 'bg-white shadow-sm' : 'bg-[#45475a] text-white') : 'text-slate-400 hover:text-slate-600'}`}>
               <PenLine size={14} />
@@ -330,6 +452,56 @@ function App() {
         </div>
       )}
 
+      {/* Find & Replace Bar */}
+      {isFindVisible && (
+        <div className={`border-b px-4 py-2 flex flex-wrap items-center justify-center gap-3 z-20 transition-colors animate-in slide-in-from-top-2 duration-200 ${theme === 'dark' ? 'bg-[#1e1e2e] border-[#313244]' : (theme === 'dim' ? 'bg-[#3a3a3a] border-[#4a4a4a]' : 'bg-[#eff1f5] border-[#dce0e8]')}`}>
+          <div className="flex items-center gap-2">
+            <div className={`relative flex items-center rounded-md border ${theme === 'light' ? 'bg-white border-[#dce0e8]' : 'bg-[#11111b] border-[#313244]'}`}>
+              <input
+                ref={findInputRef}
+                type="text"
+                placeholder="Find"
+                value={findText}
+                onChange={(e) => setFindText(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleNextMatch(); }}
+                className="bg-transparent px-3 py-1 text-xs outline-none w-48"
+              />
+              <div className="flex items-center px-2 border-l border-slate-500/10 gap-1">
+                <span className="text-[10px] font-mono opacity-40">
+                  {findResults.length > 0 ? `${currentResultIndex + 1}/${findResults.length}` : '0/0'}
+                </span>
+                <button onClick={handlePrevMatch} className="p-1 hover:bg-slate-500/10 rounded opacity-60"><ChevronUp size={12} /></button>
+                <button onClick={handleNextMatch} className="p-1 hover:bg-slate-500/10 rounded opacity-60"><ChevronDown size={12} /></button>
+              </div>
+            </div>
+            <button 
+              onClick={() => setMatchCase(!matchCase)} 
+              className={`px-2 py-1 rounded text-[10px] font-bold border transition-all ${matchCase ? 'border-[var(--accent-color)] text-[var(--accent-color)] bg-[var(--accent-color)]/10' : 'border-slate-500/20 opacity-40'}`}
+            >
+              Ab
+            </button>
+          </div>
+
+          {viewMode !== 'reading' && (
+            <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-200">
+              <input
+                type="text"
+                placeholder="Replace"
+                value={replaceText}
+                onChange={(e) => setReplaceText(e.target.value)}
+                className={`px-3 py-1 text-xs outline-none w-48 rounded-md border ${theme === 'light' ? 'bg-white border-[#dce0e8]' : 'bg-[#11111b] border-[#313244]'}`}
+              />
+              <div className="flex gap-1">
+                <button onClick={handleReplace} className="px-3 py-1 bg-slate-500/10 hover:bg-slate-500/20 rounded text-[10px] font-bold uppercase tracking-wider">Replace</button>
+                <button onClick={handleReplaceAll} className="px-3 py-1 bg-slate-500/10 hover:bg-slate-500/20 rounded text-[10px] font-bold uppercase tracking-wider">All</button>
+              </div>
+            </div>
+          )}
+
+          <button onClick={() => setIsFindVisible(false)} className="p-1 hover:text-red-500 opacity-40"><X size={16} /></button>
+        </div>
+      )}
+
       <main className="flex-1 flex overflow-hidden relative min-h-0">
         {(viewMode === 'editing' || viewMode === 'split') && (
           <div 
@@ -339,7 +511,7 @@ function App() {
             <textarea
               ref={textareaRef}
               onScroll={handleScroll('editor')}
-              className="w-full h-full p-10 pb-[30vh] mx-auto resize-none outline-none bg-transparent font-sans leading-relaxed selection:bg-slate-500/10 max-w-[720px] block overflow-y-auto"
+              className="w-full h-full p-10 pb-[30vh] mx-auto resize-none outline-none bg-transparent font-sans leading-relaxed selection:bg-[var(--accent-color)] selection:text-white max-w-[720px] block overflow-y-auto"
               style={{ fontSize: `${fontSize}px`, scrollBehavior: 'auto' }}
               value={markdown}
               onChange={handleEditorChange}
@@ -363,9 +535,13 @@ function App() {
                 <ReactMarkdown 
                   remarkPlugins={[remarkGfm]}
                   components={{
+                    // Use standard elements but highlight their text content
+                    p: ({node, ...props}) => <p {...props} />,
                     h1: ({node, ...props}) => <h1 id={props.children?.toString().toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-')} {...props} />,
                     h2: ({node, ...props}) => <h2 className="text-xl" id={props.children?.toString().toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-')} {...props} />,
                     h3: ({node, ...props}) => <h3 id={props.children?.toString().toLowerCase().replace(/[^\w\s-]/g, '').replace(/\s+/g, '-')} {...props} />,
+                    // Handle plain text nodes for highlighting
+                    text: ({node, ...props}) => <HighlightText>{props.children as string}</HighlightText>,
                     a: ({ node, ...props }) => {
                       const href = props.href || "";
                       const isExternal = href.startsWith("http") || href.startsWith("https");
@@ -520,6 +696,7 @@ function App() {
                 <span style={{ color: accentColor }} className={`transition-opacity cursor-default ${viewMode === 'reading' ? 'opacity-50' : 'opacity-100'}`}>{viewMode.toUpperCase()}</span>
                 <button onClick={() => handleOpenFile()} className={`text-[var(--accent-color)] hover:opacity-100 transition-opacity uppercase ${viewMode === 'reading' ? 'opacity-50' : 'opacity-100'}`}>OPEN</button>
                 <button onClick={() => { setMarkdown(""); setSavedMarkdown(""); setFilePath(null); setViewMode('editing'); }} className={`text-[var(--accent-color)] hover:opacity-100 transition-opacity uppercase ${viewMode === 'reading' ? 'opacity-50' : 'opacity-100'}`}>NEW</button>
+                <button onClick={() => { setIsFindVisible(!isFindVisible); if (!isFindVisible) setTimeout(() => findInputRef.current?.focus(), 10); }} className={`transition-all uppercase text-[var(--accent-color)] ${isFindVisible ? 'opacity-100' : (viewMode === 'reading' ? 'opacity-50 hover:opacity-100' : 'opacity-100')}`}>FIND</button>
               </div>
       
               {/* FileName in the center */}

@@ -1,6 +1,6 @@
 # Mark it down
 
-**Mark It Down** is a Markdown reader and editor designed to keep you away from clutter, allowing you to focus solely on your text and thoughts.
+**mark it down** is another minimal markdown reader and editor designed to keep you away from clutter, allowing you to focus solely on your text and thoughts.
 
 **Personal Note:** I searched for a good markdown editors, they want  much effort to use. This is the best for my use case. (Note taking, blogging, reading and writing GDDs and Reports.)
 

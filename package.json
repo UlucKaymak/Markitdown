@@ -1,5 +1,6 @@
 {
-  "name": "tauri-app",
+  "name": "mark-it-down",
+  "description": "another minimal markdown reader and editor",
   "private": true,
   "version": "0.1.0",
   "type": "module",
