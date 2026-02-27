@@ -36,6 +36,7 @@ jobs:
         run: npm install
 
       - uses: tauri-apps/tauri-action@v0
+        id: tauri
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -45,3 +46,32 @@ jobs:
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
+
+      - name: Create Portable Zip (Windows only)
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: |
+          $setup = Get-ChildItem -Path src-tauri/target/release/bundle/nsis/*.exe | Select-Object -First 1
+          if ($setup) {
+            $installDir = Join-Path $pwd "portable_app"
+            Write-Host "Installing to $installDir..."
+            Start-Process -FilePath $setup.FullName -ArgumentList "/S", "/D=$installDir" -Wait
+            
+            # Uninstaller'ı portable sürümden çıkaralım
+            if (Test-Path "$installDir\uninstall.exe") { Remove-Item "$installDir\uninstall.exe" -Force }
+            
+            $version = (Get-Content package.json | ConvertFrom-Json).version
+            $zipPath = "markitdown-v${version}-windows-x64-portable.zip"
+            Write-Host "Creating zip: $zipPath"
+            Compress-Archive -Path "$installDir\*" -DestinationPath $zipPath
+          }
+
+      - name: Upload Portable Asset (Windows only)
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: |
+          $version = (Get-Content package.json | ConvertFrom-Json).version
+          $tag = "v$version"
+          gh release upload $tag markitdown-*-windows-x64-portable.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
