@@ -18,6 +18,10 @@
       }
     ],
     "security": {
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["$HOME/**", "$DESKTOP/**", "$DOCUMENTS/**", "$DOWNLOADS/**"]
+      },
       "csp": null
     }
   },

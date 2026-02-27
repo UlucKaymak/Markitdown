@@ -1,7 +1,23 @@
-# Tauri + React + Typescript
+# Mark it down
 
-This template should help get you started developing with Tauri, React and Typescript in Vite.
+**Mark It Down** is a Markdown reader and editor designed to keep you away from clutter, allowing you to focus solely on your text and thoughts.
 
-## Recommended IDE Setup
+**Personal Note:** I searched for a good markdown editors, they want  much effort to use. This is the best for my use case. (Note taking, blogging, reading and writing GDDs and Reports.)
 
-- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+
+# Features 
+## Current Features
+* Markdown Reader
+* Markdown Editor 
+* Temporary Colors
+* Table of Contents
+
+## Future plans
+* "Open With" function
+* Find in page (CMD+F)
+* Multiple Windows or Tabs (CMD+Shift+N)
+* Icons for app and files
+
+## Known bugs
+* Open With function has problems with MacOS.
+* Save function has problems with MacOS.

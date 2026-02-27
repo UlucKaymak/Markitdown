@@ -129,6 +129,8 @@ put the URL where you want the link to point.
 
 This is [an example](http://example.com/) inline link.
 
+Images and Files also working with links.
+
 ### Emphasis
 
 Markdown treats asterisks (`*`) and underscores (`_`) as indicators of
