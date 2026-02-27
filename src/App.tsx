@@ -7,7 +7,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { 
   Plus, Minus, Bold, Italic, List, Code, Link, Table, 
-  Indent, PenLine, Columns2, Eye, Link2, FileImage, Search, X, ChevronUp, ChevronDown
+  Indent, PenLine, Columns2, Eye, Link2, FileImage, X, ChevronUp, ChevronDown
 } from "lucide-react";
 import markdownGuide from "./MarkdownGuide.md?raw";
 import openingMd from "./Opening.md?raw";
