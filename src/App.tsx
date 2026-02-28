@@ -4,8 +4,7 @@ import remarkGfm from "remark-gfm";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { convertFileSrc, invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
+import { convertFileSrc } from "@tauri-apps/api/core";
 import { 
   Plus, Minus, Bold, Italic, List, Code, Link, Table, 
   Indent, PenLine, Columns2, Eye, Link2, FileImage, X, ChevronUp, ChevronDown
@@ -88,25 +87,6 @@ function App() {
       console.error("Failed to open file:", error);
     }
   };
-
-  useEffect(() => {
-    // Check for pending file from startup
-    invoke<string | null>("get_pending_file").then((path) => {
-      if (path) {
-        handleOpenFile(path);
-      }
-    });
-
-    const unlistenPromise = listen<string>("open-file", (event) => {
-      if (event.payload) {
-        handleOpenFile(event.payload);
-      }
-    });
-
-    return () => {
-      unlistenPromise.then(unlisten => unlisten());
-    };
-  }, []);
 
   const handleSaveFile = async (forceSaveAs: boolean = false) => {
     try {
