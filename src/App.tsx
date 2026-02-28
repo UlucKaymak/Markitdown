@@ -297,9 +297,6 @@ function App() {
 
       if (e.key === 'Tab') {
         e.preventDefault();
-        const start = textarea.selectionStart;
-        const end = textarea.selectionEnd;
-        const text = textarea.value;
 
         // Find the start of the current line
         const lineStart = text.lastIndexOf('\n', start - 1) + 1;
