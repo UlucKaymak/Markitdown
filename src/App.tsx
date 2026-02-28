@@ -4,7 +4,7 @@ import remarkGfm from "remark-gfm";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { convertFileSrc } from "@tauri-apps/api/core";
+import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { 
   Plus, Minus, Bold, Italic, List, Code, Link, Table, 
@@ -90,6 +90,13 @@ function App() {
   };
 
   useEffect(() => {
+    // Check for pending file from startup
+    invoke<string | null>("get_pending_file").then((path) => {
+      if (path) {
+        handleOpenFile(path);
+      }
+    });
+
     const unlistenPromise = listen<string>("open-file", (event) => {
       if (event.payload) {
         handleOpenFile(event.payload);
