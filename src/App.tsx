@@ -282,6 +282,37 @@ function App() {
       const end = textarea.selectionEnd;
       const text = textarea.value;
 
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const text = textarea.value;
+
+        // Find the start of the current line
+        const lineStart = text.lastIndexOf('\n', start - 1) + 1;
+        const lineEnd = text.indexOf('\n', start);
+        const currentLine = text.substring(lineStart, lineEnd === -1 ? text.length : lineEnd);
+
+        if (e.shiftKey) {
+          // Outdent
+          if (currentLine.startsWith("  ")) {
+            const newText = text.substring(0, lineStart) + currentLine.substring(2) + text.substring(lineEnd === -1 ? text.length : lineEnd);
+            setMarkdown(newText);
+            setTimeout(() => {
+              textarea.selectionStart = textarea.selectionEnd = Math.max(lineStart, start - 2);
+            }, 0);
+          }
+        } else {
+          // Indent
+          const newText = text.substring(0, lineStart) + "  " + currentLine + text.substring(lineEnd === -1 ? text.length : lineEnd);
+          setMarkdown(newText);
+          setTimeout(() => {
+            textarea.selectionStart = textarea.selectionEnd = start + 2;
+          }, 0);
+        }
+        return;
+      }
+
       if (isMod) {
         if (e.key.toLowerCase() === 'b') {
           e.preventDefault();
@@ -329,7 +360,7 @@ function App() {
   };
 
   const isDirty = markdown !== savedMarkdown;
-  const fileName = filePath ? (filePath.includes('\\') ? filePath.split('\\').pop() : filePath.split('/').pop()) : "Opening.md";
+  const fileName = filePath ? (filePath.includes('\\') ? filePath.split('\\').pop() : filePath.split('/').pop()) : "Untitled.md";
   const displayFileName = `${fileName}${isDirty ? ' *' : ''}`;
 
   // Theme Config
