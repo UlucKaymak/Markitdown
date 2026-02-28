@@ -9,15 +9,29 @@
 ## Current Features
 * Markdown Reader
 * Markdown Editor 
-* Temporary Colors
+* Colors and Themes
 * Table of Contents
+* Find in page (CMD+F)
 
 ## Future plans
 * "Open With" function
-* Find in page (CMD+F)
 * Multiple Windows or Tabs (CMD+Shift+N)
 * Icons for app and files
 
 ## Known bugs
 * Open With function has problems with MacOS.
 * Save function has problems with MacOS.
+
+# I have one big problem
+
+I didn't noterised this app. So It will give a warning at first launch. 
+
+* for MacOS:
+```
+xattr -cr /Applications/mark\ it\ down.app
+```
+
+* for Windows:
+```
+just skip it from the warning.
+```
