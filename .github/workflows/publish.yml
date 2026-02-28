@@ -72,6 +72,6 @@ jobs:
         run: |
           $version = (Get-Content package.json | ConvertFrom-Json).version
           $tag = "v$version"
-          gh release upload $tag markitdown-*-windows-x64-portable.zip
+          gh release upload $tag markitdown-*-windows-x64-portable.zip --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
